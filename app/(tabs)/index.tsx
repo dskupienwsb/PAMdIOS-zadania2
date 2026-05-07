@@ -1,98 +1,317 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from "react";
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  FlatList,
+  Pressable,
+  StatusBar,
+  Switch,
+} from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import EventCard from "../../components/EventCard";
+
+const categories = ["Wszystkie", "Nauka", "Sport", "Muzyka", "Film"];
+
+type EventType = {
+  id: string;
+  title: string;
+  date: string;
+  category: string;
+  location: string;
+  favorite: boolean;
+  badge: string;
+};
+
+const initialEvents: EventType[] = [
+  {
+    id: "1",
+    title: "Warsztaty AI dla początkujących",
+    date: "12 maja 2026",
+    category: "Nauka",
+    location: "Warszawa",
+    favorite: false,
+    badge: "Nowe",
+  },
+  {
+    id: "2",
+    title: "Turniej siatkówki",
+    date: "15 maja 2026",
+    category: "Sport",
+    location: "Kraków",
+    favorite: true,
+    badge: "Popularne",
+  },
+  {
+    id: "3",
+    title: "Koncert muzyki filmowej",
+    date: "20 maja 2026",
+    category: "Muzyka",
+    location: "Gdańsk",
+    favorite: false,
+    badge: "Popularne",
+  },
+  {
+    id: "4",
+    title: "Maraton filmowy Marvel",
+    date: "22 maja 2026",
+    category: "Film",
+    location: "Poznań",
+    favorite: false,
+    badge: "Nowe",
+  },
+  {
+    id: "5",
+    title: "Hackathon studencki",
+    date: "25 maja 2026",
+    category: "Nauka",
+    location: "Wrocław",
+    favorite: true,
+    badge: "Popularne",
+  },
+];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [events, setEvents] = useState<EventType[]>(initialEvents);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const [searchText, setSearchText] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Wszystkie");
+
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const [darkMode, setDarkMode] = useState(false);
+
+  const theme = darkMode
+    ? {
+        background: "#121212",
+        card: "#1E1E1E",
+        text: "#FFFFFF",
+        secondary: "#B0B0B0",
+        input: "#2A2A2A",
+        active: "#4F8CFF",
+      }
+    : {
+        background: "#F4F6F8",
+        card: "#FFFFFF",
+        text: "#1A1A1A",
+        secondary: "#666666",
+        input: "#FFFFFF",
+        active: "#3B82F6"
+      };
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const matchesSearch = event.title
+        .toLowerCase()
+        .includes(searchText.toLowerCase());
+
+      const matchesCategory =
+        selectedCategory === "Wszystkie" || event.category === selectedCategory;
+
+      const matchesFavorites = !showFavoritesOnly || event.favorite;
+
+      return matchesSearch && matchesCategory && matchesFavorites;
+    });
+  }, [events, searchText, selectedCategory, showFavoritesOnly]);
+
+  const toggleFavorite = (id: string) => {
+    setEvents((prevEvents) =>
+      prevEvents.map((event) =>
+        event.id === id
+          ? {
+              ...event,
+              favorite: !event.favorite,
+            }
+          : event,
+      ),
+    );
+  };
+
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
+      <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
+
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: theme.text }]}>
+          Katalog wydarzeń
+        </Text>
+
+        <Text style={[styles.subtitle, { color: theme.secondary }]}>
+          Znajdź interesujące wydarzenia w swojej okolicy
+        </Text>
+      </View>
+
+      <View style={styles.switchContainer}>
+        <Text style={{ color: theme.text }}>Tryb ciemny</Text>
+
+        <Switch value={darkMode} onValueChange={setDarkMode} />
+      </View>
+
+      <TextInput
+        placeholder="Wyszukaj wydarzenie..."
+        placeholderTextColor={theme.secondary}
+        value={searchText}
+        onChangeText={setSearchText}
+        style={[
+          styles.input,
+          {
+            backgroundColor: theme.input,
+            color: theme.text,
+          },
+        ]}
+      />
+
+      <View style={styles.filtersContainer}>
+        {categories.map((category) => {
+          const isActive = selectedCategory === category;
+
+          return (
+            <Pressable
+              key={category}
+              onPress={() => setSelectedCategory(category)}
+              style={[
+                styles.filterButton,
+                {
+                  backgroundColor: isActive ? theme.active : theme.card,
+                },
+              ]}
+            >
+              <Text
+                style={{
+                  color: isActive ? "#FFFFFF" : theme.text,
+                  fontWeight: "600",
+                }}
+              >
+                {category}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Pressable
+        style={[
+          styles.favoriteToggle,
+          {
+            backgroundColor: showFavoritesOnly ? theme.active : theme.card,
+          },
+        ]}
+        onPress={() => setShowFavoritesOnly((prev) => !prev)}
+      >
+        <Text
+          style={{
+            color: showFavoritesOnly ? "#FFFFFF" : theme.text,
+            fontWeight: "600",
+          }}
+        >
+          {showFavoritesOnly
+            ? "Pokazujesz tylko ulubione"
+            : "Pokaż tylko ulubione"}
+        </Text>
+      </Pressable>
+
+      <Text style={[styles.results, { color: theme.secondary }]}>
+        Liczba wyników: {filteredEvents.length}
+      </Text>
+
+      {filteredEvents.length === 0 ? (
+        <Text style={[styles.emptyText, { color: theme.text }]}>
+          Brak wyników
+        </Text>
+      ) : (
+        <FlatList
+          data={filteredEvents}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <EventCard
+              title={item.title}
+              date={item.date}
+              category={item.category}
+              location={item.location}
+              favorite={item.favorite}
+              badge={item.badge}
+              darkMode={darkMode}
+              onToggleFavorite={() => toggleFavorite(item.id)}
+            />
+          )}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+
+  header: {
+    marginBottom: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+
+  title: {
+    fontSize: 30,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+
+  input: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+
+  filtersContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 16,
+  },
+
+  filterButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  favoriteToggle: {
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  results: {
+    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  emptyText: {
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+
+  switchContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
   },
 });
